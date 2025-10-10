@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI помощник для сборки ПК</title>
+  <style>
+    body {
+      font-family: "Inter", sans-serif;
+      background: #0f172a;
+      color: #f1f5f9;
+      margin: 0;
+      padding: 0;
+    }
+
+    .ai-container {
+      max-width: 700px;
+      margin: 60px auto;
+      background: #1e293b;
+      border-radius: 20px;
+      box-shadow: 0 0 25px rgba(0,0,0,0.4);
+      padding: 30px;
+    }
+
+    h2 {
+      text-align: center;
+      font-size: 24px;
+      margin-bottom: 15px;
+      color: #38bdf8;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 100px;
+      background: #0f172a;
+      border: 1px solid #334155;
+      color: #f8fafc;
+      border-radius: 12px;
+      padding: 15px;
+      font-size: 16px;
+      resize: vertical;
+      outline: none;
+      transition: 0.3s;
+    }
+
+    textarea:focus {
+      border-color: #38bdf8;
+      box-shadow: 0 0 5px #38bdf8;
+    }
+
+    button {
+      background: linear-gradient(90deg, #3b82f6, #06b6d4);
+      border: none;
+      color: white;
+      padding: 12px 20px;
+      font-size: 16px;
+      border-radius: 10px;
+      cursor: pointer;
+      margin-top: 10px;
+      width: 100%;
+      transition: 0.3s;
+    }
+
+    button:hover {
+      opacity: 0.9;
+      transform: translateY(-2px);
+    }
+
+    .response {
+      margin-top: 25px;
+      background: #0f172a;
+      padding: 15px;
+      border-radius: 12px;
+      border: 1px solid #334155;
+      white-space: pre-wrap;
+      line-height: 1.5;
+      font-size: 15px;
+    }
+
+    .loading {
+      text-align: center;
+      color: #94a3b8;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="ai-container">
+    <h2>🤖 AI помощник по сборке ПК</h2>
+    <textarea id="aiPrompt" placeholder="Напиши, какой ПК тебе нужен (например: игровой ПК до 100 000 ₽)..."></textarea>
+    <button id="aiAsk">Подобрать конфигурацию</button>
+    <div id="aiResponse" class="response"></div>
+  </div>
+
+  <script>
+    const API_KEY = "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"; // <--- сюда вставишь свой ключ
+
+    async function askAI(prompt) {
+      const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${API_KEY}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model: "mistralai/mixtral-8x7b",
+          messages: [
+            { role: "system", content: "Ты эксперт по сборке ПК. Подбирай оптимальные комплектующие под запрос пользователя с пояснениями." },
+            { role: "user", content: prompt }
+          ]
+        })
+      });
+
+      const data = await res.json();
+      return data.choices?.[0]?.message?.content || "Ошибка: не удалось получить ответ.";
+    }
+
+    document.getElementById("aiAsk").addEventListener("click", async () => {
+      const prompt = document.getElementById("aiPrompt").value.trim();
+      const responseDiv = document.getElementById("aiResponse");
+      if (!prompt) {
+        responseDiv.innerHTML = "❗ Введи запрос, чтобы я мог помочь.";
+        return;
+      }
+
+      responseDiv.innerHTML = "<div class='loading'>⌛ Генерирую конфигурацию...</div>";
+
+      try {
+        const answer = await askAI(prompt);
+        responseDiv.innerHTML = answer.replace(/\n/g, "<br>");
+      } catch (e) {
+        responseDiv.innerHTML = "⚠️ Ошибка при подключении к OpenRouter.";
+        console.error(e);
+      }
+    });
+  </script>
+
+</body>
+</html>
