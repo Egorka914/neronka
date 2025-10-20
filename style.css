@@ -1,0 +1,295 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    color: #333;
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+header {
+    text-align: center;
+    margin-bottom: 30px;
+    color: white;
+}
+
+header h1 {
+    font-size: 2.5em;
+    margin-bottom: 10px;
+}
+
+.main-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    margin-bottom: 30px;
+}
+
+.pc-builder {
+    background: white;
+    border-radius: 15px;
+    padding: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+
+.pc-case {
+    width: 100%;
+    height: 400px;
+    background: #2c3e50;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    position: relative;
+    border: 3px solid #34495e;
+    display: flex;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    padding: 10px;
+}
+
+.component-slot {
+    background: #34495e;
+    border: 2px dashed #7f8c8d;
+    border-radius: 5px;
+    margin: 5px;
+    padding: 10px;
+    color: white;
+    font-size: 12px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.component-slot:hover {
+    background: #4a6572;
+    border-color: #bdc3c7;
+}
+
+.component-slot.filled {
+    border: 2px solid #27ae60;
+    background: #2ecc71;
+}
+
+.components-list {
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.component-category {
+    margin-bottom: 15px;
+}
+
+.component-category h4 {
+    color: #2c3e50;
+    margin-bottom: 10px;
+    border-bottom: 2px solid #ecf0f1;
+    padding-bottom: 5px;
+}
+
+.components {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.component-item {
+    background: #ecf0f1;
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: grab;
+    font-size: 12px;
+    border: 2px solid #bdc3c7;
+    transition: all 0.3s ease;
+}
+
+.component-item:hover {
+    background: #3498db;
+    color: white;
+    border-color: #2980b9;
+}
+
+.ai-assistant {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.chat-container {
+    background: white;
+    border-radius: 15px;
+    padding: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    height: 400px;
+    display: flex;
+    flex-direction: column;
+}
+
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    margin-bottom: 15px;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 10px;
+}
+
+.message {
+    margin-bottom: 10px;
+    padding: 10px 15px;
+    border-radius: 10px;
+    max-width: 80%;
+}
+
+.user-message {
+    background: #3498db;
+    color: white;
+    margin-left: auto;
+}
+
+.ai-message {
+    background: #e74c3c;
+    color: white;
+}
+
+.chat-input {
+    display: flex;
+    gap: 10px;
+}
+
+.chat-input input {
+    flex: 1;
+    padding: 12px;
+    border: 2px solid #bdc3c7;
+    border-radius: 8px;
+    font-size: 14px;
+}
+
+.chat-input button {
+    background: #e74c3c;
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.chat-input button:hover {
+    background: #c0392b;
+}
+
+.ai-recommendations {
+    background: white;
+    border-radius: 15px;
+    padding: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+
+.build-summary {
+    background: white;
+    border-radius: 15px;
+    padding: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+
+.build-summary button {
+    background: #27ae60;
+    color: white;
+    border: none;
+    padding: 12px 25px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    margin-top: 15px;
+}
+
+.build-summary button:hover {
+    background: #219a52;
+}
+
+#recommendations, #buildSummary {
+    min-height: 100px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    margin-top: 10px;
+}
+/* Добавьте эти стили в конец файла style.css */
+
+.build-details {
+    font-size: 14px;
+}
+
+.build-item {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    padding: 8px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    align-items: center;
+}
+
+.component-name {
+    font-weight: bold;
+    width: 140px;
+    color: #2c3e50;
+}
+
+.component-details {
+    flex: 1;
+    text-align: left;
+    padding: 0 15px;
+}
+
+.component-price {
+    font-weight: bold;
+    color: #27ae60;
+    min-width: 80px;
+    text-align: right;
+}
+
+.build-total {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 2px solid #bdc3c7;
+    background: #ecf0f1;
+    padding: 15px;
+    border-radius: 8px;
+}
+
+.power-consumption {
+    font-size: 12px;
+    color: #7f8c8d;
+    margin-top: 5px;
+}
+
+.message.loading {
+    background: #95a5a6 !important;
+    font-style: italic;
+}
+
+/* Адаптивность для мобильных устройств */
+@media (max-width: 768px) {
+    .main-content {
+        grid-template-columns: 1fr;
+    }
+    
+    .build-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .component-details {
+        padding: 5px 0;
+    }
+}

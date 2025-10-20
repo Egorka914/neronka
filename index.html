@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Помощник по сборке ПК</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🤖 AI Помощник по сборке компьютера</h1>
+            <p>Получите персонализированные рекомендации по сборке ПК</p>
+        </header>
+
+        <div class="main-content">
+            <div class="pc-builder">
+                <div class="pc-case" id="pcCase">
+                    <!-- Компоненты будут добавляться через JS -->
+                </div>
+                
+                <div class="components-list">
+                    <h3>Доступные компоненты</h3>
+                    <div class="component-category">
+                        <h4>Процессоры</h4>
+                        <div class="components" id="cpus"></div>
+                    </div>
+                    <div class="component-category">
+                        <h4>Материнские платы</h4>
+                        <div class="components" id="motherboards"></div>
+                    </div>
+                    <div class="component-category">
+                        <h4>Видеокарты</h4>
+                        <div class="components" id="gpus"></div>
+                    </div>
+                    <div class="component-category">
+                        <h4>Оперативная память</h4>
+                        <div class="components" id="ram"></div>
+                    </div>
+                    <div class="component-category">
+                        <h4>Накопители</h4>
+                        <div class="components" id="storage"></div>
+                    </div>
+                    <div class="component-category">
+                        <h4>Блоки питания</h4>
+                        <div class="components" id="psus"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ai-assistant">
+                <div class="chat-container">
+                    <div class="chat-messages" id="chatMessages">
+                        <div class="message ai-message">
+                            Привет! Я помогу тебе собрать компьютер. Расскажи, для каких целей ты его собираешь и какой у тебя бюджет?
+                        </div>
+                    </div>
+                    <div class="chat-input">
+                        <input type="text" id="userInput" placeholder="Введите ваш вопрос или опишите задачи для ПК...">
+                        <button onclick="sendMessage()">Отправить</button>
+                    </div>
+                </div>
+
+                <div class="ai-recommendations">
+                    <h3>Рекомендации AI</h3>
+                    <div id="recommendations"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="build-summary">
+            <h3>Текущая сборка</h3>
+            <div id="buildSummary"></div>
+            <button onclick="analyzeBuild()">Проанализировать сборку</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
