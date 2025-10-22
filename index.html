@@ -1,0 +1,2440 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Конструктор ПК с 3D визуализацией</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/DRACOLoader.min.js"></script>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #3498db;
+            --accent: #e74c3c;
+            --light: #ecf0f1;
+            --dark: #2c3e50;
+            --success: #27ae60;
+            --warning: #f39c12;
+            --danger: #e74c3c;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1a2a3a 0%, #2c3e50 100%);
+            color: var(--light);
+            line-height: 1.6;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        header {
+            background: rgba(0, 0, 0, 0.3);
+            color: white;
+            padding: 1rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .mobile-header {
+            display: none;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            background: rgba(0, 0, 0, 0.3);
+        }
+        
+        .mobile-menu-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+        }
+        
+        .container {
+            display: flex;
+            max-width: 1800px;
+            margin: 0 auto;
+            padding: 20px;
+            gap: 20px;
+            min-height: calc(100vh - 100px);
+        }
+        
+        .configurator {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+            max-height: 90vh;
+            overflow-y: auto;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+            position: relative;
+            transition: transform 0.3s ease;
+        }
+        
+        .configurator.mobile-hidden {
+            transform: translateX(-100%);
+        }
+        
+        .visualization {
+            flex: 1.5;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+            display: flex;
+            flex-direction: column;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        h1, h2, h3 {
+            margin-bottom: 1rem;
+            color: white;
+        }
+        
+        h1 {
+            font-size: clamp(1.5rem, 4vw, 2.5rem);
+            text-align: center;
+            background: linear-gradient(90deg, #3498db, #2ecc71);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+        
+        h2 {
+            font-size: clamp(1.3rem, 3vw, 1.8rem);
+            border-bottom: 2px solid rgba(52, 152, 219, 0.5);
+            padding-bottom: 10px;
+        }
+        
+        h3 {
+            font-size: clamp(1.1rem, 2.5vw, 1.4rem);
+            color: #3498db;
+        }
+        
+        .budget-section {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .budget-input {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        input[type="range"] {
+            flex: 1;
+            height: 8px;
+            border-radius: 4px;
+            background: rgba(255,255,255,0.1);
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #3498db;
+            cursor: pointer;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+        
+        .budget-value {
+            font-weight: bold;
+            font-size: clamp(1.1rem, 3vw, 1.4rem);
+            color: #2ecc71;
+            min-width: 100px;
+            text-align: center;
+        }
+        
+        .component-list {
+            margin-top: 20px;
+        }
+        
+        .component-category {
+            margin-bottom: 25px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+            padding: 15px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .component-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 12px;
+            margin-bottom: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+            position: relative;
+            overflow: hidden;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .component-item-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            width: 100%;
+        }
+        
+        .component-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            transition: left 0.5s;
+        }
+        
+        .component-item:hover::before {
+            left: 100%;
+        }
+        
+        .component-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+            border-color: rgba(52, 152, 219, 0.5);
+        }
+        
+        .component-item.selected {
+            background: rgba(52, 152, 219, 0.2);
+            color: white;
+            border-color: #3498db;
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
+        }
+        
+        .component-price {
+            font-weight: bold;
+            color: #2ecc71;
+            font-size: 1rem;
+            white-space: nowrap;
+            margin-left: 10px;
+        }
+        
+        .component-item.selected .component-price {
+            color: #2ecc71;
+        }
+        
+        .compatibility-status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 12px;
+            background: rgba(52, 152, 219, 0.1);
+            border-left: 5px solid var(--secondary);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .compatibility-error {
+            background: rgba(231, 76, 60, 0.1);
+            border-left: 5px solid var(--danger);
+        }
+        
+        .compatibility-warning {
+            background: rgba(243, 156, 18, 0.1);
+            border-left: 5px solid var(--warning);
+        }
+        
+        #render-container {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            margin-top: 15px;
+            position: relative;
+            overflow: hidden;
+            min-height: 400px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .total-price {
+            font-size: clamp(1.3rem, 3vw, 1.6rem);
+            font-weight: bold;
+            margin-top: 20px;
+            text-align: center;
+            color: white;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .ai-suggestion {
+            background: rgba(26, 188, 156, 0.1);
+            padding: 15px;
+            border-radius: 12px;
+            margin-top: 20px;
+            border-left: 5px solid #1abc9c;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            background: linear-gradient(135deg, var(--secondary), #2980b9);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            flex: 1;
+            min-width: 120px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            position: relative;
+            overflow: hidden;
+            font-size: clamp(0.8rem, 2vw, 1rem);
+        }
+        
+        button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+        
+        button:hover::before {
+            left: 100%;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+        
+        button:active {
+            transform: translateY(1px);
+        }
+        
+        .ai-button {
+            background: linear-gradient(135deg, #1abc9c, #16a085);
+        }
+        
+        .success-button {
+            background: linear-gradient(135deg, #27ae60, #219a52);
+        }
+        
+        .danger-button {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+        }
+        
+        .controls-info {
+            margin-top: 15px;
+            font-size: 0.8rem;
+            color: #bdc3c7;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 8px;
+            border-radius: 8px;
+        }
+        
+        .component-details {
+            font-size: 0.85rem;
+            color: #bdc3c7;
+            margin-top: 5px;
+        }
+        
+        .component-specs {
+            display: none;
+            margin-top: 10px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            font-size: 0.8rem;
+            border: 1px solid rgba(255,255,255,0.05);
+            width: 100%;
+        }
+        
+        .component-item.selected .component-specs {
+            display: block;
+        }
+        
+        .component-specs ul {
+            margin-left: 15px;
+        }
+        
+        .component-specs li {
+            margin-bottom: 4px;
+        }
+        
+        .performance-indicator {
+            display: flex;
+            align-items: center;
+            margin-top: 8px;
+            gap: 8px;
+            width: 100%;
+        }
+        
+        .performance-bar {
+            flex: 1;
+            height: 6px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        
+        .performance-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #e74c3c, #f39c12, #2ecc71);
+            border-radius: 3px;
+            transition: width 0.5s ease;
+        }
+        
+        .performance-value {
+            font-size: 0.75rem;
+            color: #bdc3c7;
+            min-width: 35px;
+        }
+        
+        .component-icon {
+            margin-right: 8px;
+            font-size: 1.1rem;
+        }
+        
+        .stats-panel {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 20px;
+        }
+        
+        .stat-card {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 12px;
+            border-radius: 10px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .stat-value {
+            font-size: clamp(1.3rem, 3vw, 1.8rem);
+            font-weight: bold;
+            color: #3498db;
+            margin: 8px 0;
+        }
+        
+        .stat-label {
+            font-size: 0.8rem;
+            color: #bdc3c7;
+        }
+        
+        .power-consumption {
+            color: #f39c12;
+        }
+        
+        .compatibility-score {
+            color: #2ecc71;
+        }
+        
+        .progress-container {
+            margin-top: 8px;
+            height: 6px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #e74c3c, #f39c12, #2ecc71);
+            border-radius: 3px;
+            transition: width 0.5s ease;
+        }
+        
+        .configurator-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .search-box {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 8px;
+            padding: 8px 12px;
+            color: white;
+            width: 100%;
+            max-width: 200px;
+            font-size: 0.85rem;
+        }
+        
+        .search-box::placeholder {
+            color: rgba(255,255,255,0.5);
+        }
+        
+        .component-filter {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .filter-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            transition: all 0.3s ease;
+            flex: 1;
+            min-width: 60px;
+        }
+        
+        .filter-btn.active {
+            background: rgba(52, 152, 219, 0.5);
+            border-color: #3498db;
+        }
+        
+        .component-category.collapsed .component-item {
+            display: none;
+        }
+        
+        .category-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            padding: 5px 0;
+        }
+        
+        .category-toggle {
+            font-size: 1.1rem;
+            transition: transform 0.3s ease;
+        }
+        
+        .component-category.collapsed .category-toggle {
+            transform: rotate(-90deg);
+        }
+        
+        .quick-presets {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+        
+        .preset-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+            padding: 6px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            transition: all 0.3s ease;
+            flex: 1;
+            min-width: 70px;
+        }
+        
+        .preset-btn:hover {
+            background: rgba(52, 152, 219, 0.3);
+        }
+        
+        .performance-badge {
+            display: inline-block;
+            background: rgba(52, 152, 219, 0.3);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 8px;
+            font-size: 0.65rem;
+            margin-left: 6px;
+        }
+        
+        .price-comparison {
+            margin-top: 8px;
+            font-size: 0.75rem;
+            color: #bdc3c7;
+        }
+        
+        .price-difference {
+            font-weight: bold;
+        }
+        
+        .price-difference.positive {
+            color: #2ecc71;
+        }
+        
+        .price-difference.negative {
+            color: #e74c3c;
+        }
+        
+        .tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            z-index: 1000;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+            max-width: 200px;
+        }
+        
+        .tooltip.show {
+            opacity: 1;
+        }
+        
+        .component-item:hover .tooltip {
+            opacity: 1;
+        }
+        
+        .mobile-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 98;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .mobile-overlay.active {
+            opacity: 1;
+        }
+        
+        /* Мобильные стили */
+        @media (max-width: 1200px) {
+            .container {
+                flex-direction: column;
+                padding: 15px;
+                gap: 15px;
+            }
+            
+            .stats-panel {
+                grid-template-columns: 1fr 1fr;
+            }
+            
+            .configurator {
+                max-height: none;
+                padding: 15px;
+            }
+            
+            .visualization {
+                padding: 15px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .mobile-header {
+                display: flex;
+            }
+            
+            header {
+                display: none;
+            }
+            
+            .container {
+                padding: 10px;
+                gap: 10px;
+                flex-direction: column;
+            }
+            
+            .configurator {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 85%;
+                max-width: 400px;
+                height: 100vh;
+                z-index: 99;
+                transform: translateX(-100%);
+                border-radius: 0;
+                padding: 20px 15px;
+                overflow-y: auto;
+            }
+            
+            .configurator.mobile-visible {
+                transform: translateX(0);
+            }
+            
+            .mobile-overlay {
+                display: block;
+            }
+            
+            .button-group {
+                flex-direction: column;
+            }
+            
+            .budget-input {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 10px;
+            }
+            
+            .budget-value {
+                margin-top: 5px;
+            }
+            
+            .quick-presets {
+                flex-direction: column;
+            }
+            
+            .preset-btn {
+                min-width: auto;
+            }
+            
+            .component-filter {
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                padding-bottom: 5px;
+            }
+            
+            .filter-btn {
+                flex: 0 0 auto;
+                white-space: nowrap;
+            }
+            
+            .stats-panel {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+            
+            .configurator-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .search-box {
+                max-width: none;
+            }
+            
+            .component-item {
+                padding: 10px;
+            }
+            
+            .component-item-content {
+                flex-direction: column;
+                gap: 5px;
+            }
+            
+            .component-price {
+                margin-left: 0;
+                align-self: flex-end;
+            }
+            
+            #render-container {
+                min-height: 300px;
+            }
+            
+            .view-controls {
+                bottom: 10px;
+                left: 10px;
+                flex-wrap: wrap;
+            }
+            
+            .view-btn {
+                padding: 6px 10px;
+                font-size: 0.8rem;
+            }
+            
+            .performance-mode {
+                top: 10px;
+                right: 10px;
+                flex-wrap: wrap;
+                justify-content: flex-end;
+            }
+            
+            .mode-btn {
+                padding: 6px 10px;
+                font-size: 0.8rem;
+            }
+            
+            .exploded-view-control {
+                bottom: 10px;
+                right: 10px;
+            }
+            
+            .exploded-btn {
+                padding: 6px 10px;
+                font-size: 0.8rem;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .container {
+                padding: 5px;
+            }
+            
+            .configurator {
+                width: 90%;
+                padding: 15px 10px;
+            }
+            
+            .component-category {
+                padding: 10px;
+                margin-bottom: 15px;
+            }
+            
+            .component-item {
+                padding: 8px;
+                margin-bottom: 8px;
+            }
+            
+            .budget-section {
+                padding: 10px;
+            }
+            
+            .compatibility-status, .ai-suggestion {
+                padding: 10px;
+            }
+            
+            .stat-card {
+                padding: 8px;
+            }
+            
+            .total-price {
+                padding: 10px;
+            }
+            
+            button {
+                padding: 10px 15px;
+                min-width: 100px;
+            }
+            
+            #render-container {
+                min-height: 250px;
+            }
+            
+            .view-controls, .performance-mode, .exploded-view-control {
+                position: relative;
+                bottom: auto;
+                left: auto;
+                right: auto;
+                margin-top: 10px;
+                justify-content: center;
+            }
+            
+            .controls-info {
+                font-size: 0.7rem;
+                padding: 6px;
+            }
+        }
+        
+        @media (max-width: 360px) {
+            .component-item-content {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .component-price {
+                align-self: flex-start;
+                margin-top: 5px;
+            }
+            
+            .button-group {
+                gap: 8px;
+            }
+            
+            button {
+                min-width: 80px;
+                padding: 8px 12px;
+            }
+        }
+        
+        /* Стили для скроллбара */
+        .configurator::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .configurator::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.05);
+            border-radius: 3px;
+        }
+        
+        .configurator::-webkit-scrollbar-thumb {
+            background: rgba(52, 152, 219, 0.5);
+            border-radius: 3px;
+        }
+        
+        .configurator::-webkit-scrollbar-thumb:hover {
+            background: rgba(52, 152, 219, 0.7);
+        }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 16px;
+            background: rgba(39, 174, 96, 0.9);
+            color: white;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            transform: translateX(150%);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+            max-width: 300px;
+            word-wrap: break-word;
+        }
+        
+        .notification.show {
+            transform: translateX(0);
+        }
+        
+        .component-highlight {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(52, 152, 219, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(52, 152, 219, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(52, 152, 219, 0); }
+        }
+
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(26, 42, 58, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            color: white;
+            font-size: 1rem;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .view-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            display: flex;
+            gap: 8px;
+            z-index: 5;
+        }
+
+        .view-btn {
+            background: rgba(52, 152, 219, 0.7);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .view-btn:hover {
+            background: rgba(52, 152, 219, 0.9);
+            transform: translateY(-2px);
+        }
+        
+        .performance-mode {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 5;
+            display: flex;
+            gap: 8px;
+        }
+        
+        .mode-btn {
+            background: rgba(52, 152, 219, 0.7);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+        
+        .mode-btn.active {
+            background: rgba(52, 152, 219, 0.9);
+            box-shadow: 0 0 10px rgba(52, 152, 219, 0.5);
+        }
+        
+        .component-label {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 10;
+        }
+        
+        .component-label.show {
+            opacity: 1;
+        }
+
+        .exploded-view-control {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            z-index: 5;
+        }
+
+        .exploded-btn {
+            background: rgba(231, 76, 60, 0.7);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .exploded-btn:hover {
+            background: rgba(231, 76, 60, 0.9);
+            transform: translateY(-2px);
+        }
+
+        .component-list-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 4px;
+            font-size: 0.85rem;
+        }
+
+        .component-visual-list {
+            margin-top: 12px;
+            max-height: 150px;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 8px;
+            font-size: 0.85rem;
+        }
+        
+        .mobile-only {
+            display: none;
+        }
+        
+        @media (max-width: 768px) {
+            .mobile-only {
+                display: block;
+            }
+            
+            .desktop-only {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Мобильный заголовок -->
+    <div class="mobile-header">
+        <button class="mobile-menu-btn" id="mobile-menu-btn">☰</button>
+        <h1>Конструктор ПК</h1>
+        <div style="width: 48px;"></div> <!-- Для выравнивания -->
+    </div>
+    
+    <!-- Основной заголовок -->
+    <header class="desktop-only">
+        <h1>Конструктор ПК с 3D визуализацией</h1>
+    </header>
+    
+    <div class="container">
+        <!-- Затемнение для мобильных -->
+        <div class="mobile-overlay" id="mobile-overlay"></div>
+        
+        <!-- Конфигуратор -->
+        <div class="configurator" id="configurator">
+            <div class="configurator-header">
+                <h2>Конфигуратор</h2>
+                <input type="text" class="search-box" placeholder="Поиск компонентов..." id="component-search">
+            </div>
+            
+            <div class="component-filter">
+                <button class="filter-btn active" data-filter="all">Все</button>
+                <button class="filter-btn" data-filter="gaming">Игровые</button>
+                <button class="filter-btn" data-filter="budget">Бюджетные</button>
+                <button class="filter-btn" data-filter="performance">Производительные</button>
+            </div>
+            
+            <div class="budget-section">
+                <h2>Ваш бюджет</h2>
+                <div class="budget-input">
+                    <input type="range" id="budget-slider" min="30000" max="300000" step="10000" value="100000">
+                    <span class="budget-value" id="budget-value">100 000 ₽</span>
+                </div>
+                <div class="quick-presets">
+                    <button class="preset-btn" data-preset="50000">50 000 ₽</button>
+                    <button class="preset-btn" data-preset="100000">100 000 ₽</button>
+                    <button class="preset-btn" data-preset="150000">150 000 ₽</button>
+                    <button class="preset-btn" data-preset="200000">200 000 ₽</button>
+                </div>
+                <button class="ai-button" id="ai-suggest">🤖 Автоподбор</button>
+            </div>
+            
+            <div class="component-list">
+                <!-- Процессоры -->
+                <div class="component-category">
+                    <div class="category-header">
+                        <h3><span class="component-icon">💻</span> Процессор</h3>
+                        <span class="category-toggle">▼</span>
+                    </div>
+                    <div class="component-item" data-component="cpu" data-price="15000" data-socket="LGA1700" data-cores="6" data-threads="12" data-performance="65" data-power="65" data-category="budget" data-model="cpu1">
+                        <div class="component-item-content">
+                            <div>
+                                <span>Intel Core i5-12400F <span class="performance-badge">Бюджет</span></span>
+                                <div class="component-details">LGA1700, 6 ядер, 12 потоков</div>
+                            </div>
+                            <span class="component-price">15 000 ₽</span>
+                        </div>
+                        <div class="performance-indicator">
+                            <div class="performance-bar">
+                                <div class="performance-fill" style="width: 65%"></div>
+                            </div>
+                            <div class="performance-value">65%</div>
+                        </div>
+                        <div class="component-specs">
+                            <ul>
+                                <li>Сокет: LGA1700</li>
+                                <li>Ядра: 6</li>
+                                <li>Потоки: 12</li>
+                                <li>Тепловыделение: 65 Вт</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="component-item" data-component="cpu" data-price="25000" data-socket="AM4" data-cores="6" data-threads="12" data-performance="75" data-power="65" data-category="gaming" data-model="cpu2">
+                        <div class="component-item-content">
+                            <div>
+                                <span>AMD Ryzen 5 5600X <span class="performance-badge">Игры</span></span>
+                                <div class="component-details">AM4, 6 ядер, 12 потоков</div>
+                            </div>
+                            <span class="component-price">25 000 ₽</span>
+                        </div>
+                        <div class="performance-indicator">
+                            <div class="performance-bar">
+                                <div class="performance-fill" style="width: 75%"></div>
+                            </div>
+                            <div class="performance-value">75%</div>
+                        </div>
+                        <div class="component-specs">
+                            <ul>
+                                <li>Сокет: AM4</li>
+                                <li>Ядра: 6</li>
+                                <li>Потоки: 12</li>
+                                <li>Тепловыделение: 65 Вт</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="component-item" data-component="cpu" data-price="40000" data-socket="LGA1700" data-cores="12" data-threads="20" data-performance="90" data-power="125" data-category="performance" data-model="cpu3">
+                        <div class="component-item-content">
+                            <div>
+                                <span>Intel Core i7-12700K <span class="performance-badge">Производительность</span></span>
+                                <div class="component-details">LGA1700, 12 ядер, 20 потоков</div>
+                            </div>
+                            <span class="component-price">40 000 ₽</span>
+                        </div>
+                        <div class="performance-indicator">
+                            <div class="performance-bar">
+                                <div class="performance-fill" style="width: 90%"></div>
+                            </div>
+                            <div class="performance-value">90%</div>
+                        </div>
+                        <div class="component-specs">
+                            <ul>
+                                <li>Сокет: LGA1700</li>
+                                <li>Ядра: 12 (8P+4E)</li>
+                                <li>Потоки: 20</li>
+                                <li>Тепловыделение: 125 Вт</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Материнские платы -->
+                <div class="component-category">
+                    <div class="category-header">
+                        <h3><span class="component-icon">🔌</span> Материнская плата</h3>
+                        <span class="category-toggle">▼</span>
+                    </div>
+                    <div class="component-item" data-component="motherboard" data-price="8000" data-socket="LGA1700" data-ramtype="DDR4" data-performance="60" data-category="budget" data-model="mb1">
+                        <div class="component-item-content">
+                            <div>
+                                <span>ASUS PRIME B660M-A <span class="performance-badge">Бюджет</span></span>
+                                <div class="component-details">LGA1700, DDR4</div>
+                            </div>
+                            <span class="component-price">8 000 ₽</span>
+                        </div>
+                        <div class="performance-indicator">
+                            <div class="performance-bar">
+                                <div class="performance-fill" style="width: 60%"></div>
+                            </div>
+                            <div class="performance-value">60%</div>
+                        </div>
+                        <div class="component-specs">
+                            <ul>
+                                <li>Сокет: LGA1700</li>
+                                <li>Чипсет: B660</li>
+                                <li>Память: DDR4</li>
+                                <li>Форм-фактор: Micro-ATX</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="component-item" data-component="motherboard" data-price="15000" data-socket="AM4" data-ramtype="DDR4" data-performance="75" data-category="gaming" data-model="mb2">
+                        <div class="component-item-content">
+                            <div>
+                                <span>MSI MAG B550 TOMAHAWK <span class="performance-badge">Игры</span></span>
+                                <div class="component-details">AM4, DDR4</div>
+                            </div>
+                            <span class="component-price">15 000 ₽</span>
+                        </div>
+                        <div class="performance-indicator">
+                            <div class="performance-bar">
+                                <div class="performance-fill" style="width: 75%"></div>
+                            </div>
+                            <div class="performance-value">75%</div>
+                        </div>
+                        <div class="component-specs">
+                            <ul>
+                                <li>Сокет: AM4</li>
+                                <li>Чипсет: B550</li>
+                                <li>Память: DDR4</li>
+                                <li>Форм-фактор: ATX</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="component-item" data-component="motherboard" data-price="22000" data-socket="LGA1700" data-ramtype="DDR5" data-performance="90" data-category="performance" data-model="mb3">
+                        <div class="component-item-content">
+                            <div>
+                                <span>Gigabyte Z690 AORUS ELITE <span class="performance-badge">Производительность</span></span>
+                                <div class="component-details">LGA1700, DDR5</div>
+                            </div>
+                            <span class="component-price">22 000 ₽</span>
+                        </div>
+                        <div class="performance-indicator">
+                            <div class="performance-bar">
+                                <div class="performance-fill" style="width: 90%"></div>
+                            </div>
+                            <div class="performance-value">90%</div>
+                        </div>
+                        <div class="component-specs">
+                            <ul>
+                                <li>Сокет: LGA1700</li>
+                                <li>Чипсет: Z690</li>
+                                <li>Память: DDR5</li>
+                                <li>Форм-фактор: ATX</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Видеокарты -->
+                <div class="component-category">
+                    <div class="category-header">
+                        <h3><span class="component-icon">🎮</span> Видеокарта</h3>
+                        <span class="category-toggle">▼</span>
+                    </div>
+                    <div class="component-item" data-component="gpu" data-price="30000" data-performance="70" data-power="170" data-vram="8" data-category="budget" data-model="gpu1">
+                        <div class="component-item-content">
+                            <div>
+                                <span>NVIDIA GeForce RTX 3060 <span class="performance-badge">Бюджет</span></span>
+                                <div class="component-details">8GB GDDR6</div>
+                            </div>
+                            <span class="component-price">30 000 ₽</span>
+                        </div>
+                        <div class="performance-indicator">
+                            <div class="performance-bar">
+                                <div class="performance-fill" style="width: 70%"></div>
+                            </div>
+                            <div class="performance-value">70%</div>
+                        </div>
+                        <div class="component-specs">
+                            <ul>
+                                <li>Память: 8GB GDDR6</li>
+                                <li>Потребление: 170 Вт</li>
+                                <li>Порты: DisplayPort, HDMI</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="component-item" data-component="gpu" data-price="50000" data-performance="85" data-power="220" data-vram="12" data-category="gaming" data-model="gpu2">
+                        <div class="component-item-content">
+                            <div>
+                                <span>NVIDIA GeForce RTX 3070 <span class="performance-badge">Игры</span></span>
+                                <div class="component-details">12GB GDDR6</div>
+                            </div>
+                            <span class="component-price">50 000 ₽</span>
+                        </div>
+                        <div class="performance-indicator">
+                            <div class="performance-bar">
+                                <div class="performance-fill" style="width: 85%"></div>
+                            </div>
+                            <div class="performance-value">85%</div>
+                        </div>
+                        <div class="component-specs">
+                            <ul>
+                                <li>Память: 12GB GDDR6</li>
+                                <li>Потребление: 220 Вт</li>
+                                <li>Порты: DisplayPort, HDMI</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="component-item" data-component="gpu" data-price="80000" data-performance="95" data-power="350" data-vram="16" data-category="performance" data-model="gpu3">
+                        <div class="component-item-content">
+                            <div>
+                                <span>NVIDIA GeForce RTX 3080 <span class="performance-badge">Производительность</span></span>
+                                <div class="component-details">16GB GDDR6X</div>
+                            </div>
+                            <span class="component-price">80 000 ₽</span>
+                        </div>
+                        <div class="performance-indicator">
+                            <div class="performance-bar">
+                                <div class="performance-fill" style="width: 95%"></div>
+                            </div>
+                            <div class="performance-value">95%</div>
+                        </div>
+                        <div class="component-specs">
+                            <ul>
+                                <li>Память: 16GB GDDR6X</li>
+                                <li>Потребление: 350 Вт</li>
+                                <li>Порты: DisplayPort, HDMI</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Оперативная память -->
+                <div class="component-category">
+                    <div class="category-header">
+                        <h3><span class="component-icon">🧠</span> Оперативная память</h3>
+                        <span class="category-toggle">▼</span>
+                    </div>
+                    <div class="component-item" data-component="ram" data-price="6000" data-ramtype="DDR4" data-size="16" data-speed="3200" data-performance="70" data-category="budget" data-model="ram1">
+                        <div class="component-item-content">
+                            <div>
+                                <span>Crucial Ballistix 16GB DDR4 <span class="performance-badge">Бюджет</span></span>
+                                <div class="component-details">16GB (2x8GB) 3200MHz</div>
+                            </div>
+                            <span class="component-price">6 000 ₽</span>
+                        </div>
+                        <div class="performance-indicator">
+                            <div class="performance-bar">
+                                <div class="performance-fill" style="width: 70%"></div>
+                            </div>
+                            <div class="performance-value">70%</div>
+                        </div>
+                        <div class="component-specs">
+                            <ul>
+                                <li>Тип: DDR4</li>
+                                <li>Объем: 16GB (2x8GB)</li>
+                                <li>Частота: 3200MHz</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="component-item" data-component="ram" data-price="12000" data-ramtype="DDR4" data-size="32" data-speed="3600" data-performance="80" data-category="gaming" data-model="ram2">
+                        <div class="component-item-content">
+                            <div>
+                                <span>Corsair Vengeance RGB 32GB DDR4 <span class="performance-badge">Игры</span></span>
+                                <div class="component-details">32GB (2x16GB) 3600MHz</div>
+                            </div>
+                            <span class="component-price">12 000 ₽</span>
+                        </div>
+                        <div class="performance-indicator">
+                            <div class="performance-bar">
+                                <div class="performance-fill" style="width: 80%"></div>
+                            </div>
+                            <div class="performance-value">80%</div>
+                        </div>
+                        <div class="component-specs">
+                            <ul>
+                                <li>Тип: DDR4</li>
+                                <li>Объем: 32GB (2x16GB)</li>
+                                <li>Частота: 3600MHz</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="component-item" data-component="ram" data-price="18000" data-ramtype="DDR5" data-size="32" data-speed="5600" data-performance="90" data-category="performance" data-model="ram3">
+                        <div class="component-item-content">
+                            <div>
+                                <span>G.Skill Trident Z5 32GB DDR5 <span class="performance-badge">Производительность</span></span>
+                                <div class="component-details">32GB (2x16GB) 5600MHz</div>
+                            </div>
+                            <span class="component-price">18 000 ₽</span>
+                        </div>
+                        <div class="performance-indicator">
+                            <div class="performance-bar">
+                                <div class="performance-fill" style="width: 90%"></div>
+                            </div>
+                            <div class="performance-value">90%</div>
+                        </div>
+                        <div class="component-specs">
+                            <ul>
+                                <li>Тип: DDR5</li>
+                                <li>Объем: 32GB (2x16GB)</li>
+                                <li>Частота: 5600MHz</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Блоки питания -->
+                <div class="component-category">
+                    <div class="category-header">
+                        <h3><span class="component-icon">⚡</span> Блок питания</h3>
+                        <span class="category-toggle">▼</span>
+                    </div>
+                    <div class="component-item" data-component="psu" data-price="5000" data-wattage="550" data-efficiency="80+" data-performance="70" data-category="budget" data-model="psu1">
+                        <div class="component-item-content">
+                            <div>
+                                <span>be quiet! System Power 9 550W <span class="performance-badge">Бюджет</span></span>
+                                <div class="component-details">550W, 80+ Bronze</div>
+                            </div>
+                            <span class="component-price">5 000 ₽</span>
+                        </div>
+                        <div class="performance-indicator">
+                            <div class="performance-bar">
+                                <div class="performance-fill" style="width: 70%"></div>
+                            </div>
+                            <div class="performance-value">70%</div>
+                        </div>
+                        <div class="component-specs">
+                            <ul>
+                                <li>Мощность: 550W</li>
+                                <li>Сертификат: 80+ Bronze</li>
+                                <li>Разъемы: 1x CPU 8-pin, 2x PCIe 8-pin</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="component-item" data-component="psu" data-price="8000" data-wattage="750" data-efficiency="80+ Gold" data-performance="85" data-category="gaming" data-model="psu2">
+                        <div class="component-item-content">
+                            <div>
+                                <span>Corsair RM750x 750W <span class="performance-badge">Игры</span></span>
+                                <div class="component-details">750W, 80+ Gold</div>
+                            </div>
+                            <span class="component-price">8 000 ₽</span>
+                        </div>
+                        <div class="performance-indicator">
+                            <div class="performance-bar">
+                                <div class="performance-fill" style="width: 85%"></div>
+                            </div>
+                            <div class="performance-value">85%</div>
+                        </div>
+                        <div class="component-specs">
+                            <ul>
+                                <li>Мощность: 750W</li>
+                                <li>Сертификат: 80+ Gold</li>
+                                <li>Разъемы: 2x CPU 8-pin, 4x PCIe 8-pin</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="component-item" data-component="psu" data-price="12000" data-wattage="1000" data-efficiency="80+ Platinum" data-performance="95" data-category="performance" data-model="psu3">
+                        <div class="component-item-content">
+                            <div>
+                                <span>Seasonic PRIME TX-1000 1000W <span class="performance-badge">Производительность</span></span>
+                                <div class="component-details">1000W, 80+ Platinum</div>
+                            </div>
+                            <span class="component-price">12 000 ₽</span>
+                        </div>
+                        <div class="performance-indicator">
+                            <div class="performance-bar">
+                                <div class="performance-fill" style="width: 95%"></div>
+                            </div>
+                            <div class="performance-value">95%</div>
+                        </div>
+                        <div class="component-specs">
+                            <ul>
+                                <li>Мощность: 1000W</li>
+                                <li>Сертификат: 80+ Platinum</li>
+                                <li>Разъемы: 2x CPU 8-pin, 6x PCIe 8-pin</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Кулеры -->
+                <div class="component-category">
+                    <div class="category-header">
+                        <h3><span class="component-icon">🌀</span> Охлаждение</h3>
+                        <span class="category-toggle">▼</span>
+                    </div>
+                    <div class="component-item" data-component="cooler" data-price="3000" data-type="air" data-performance="65" data-category="budget" data-model="cooler1">
+                        <div class="component-item-content">
+                            <div>
+                                <span>Cooler Master Hyper 212 <span class="performance-badge">Бюджет</span></span>
+                                <div class="component-details">Башенный кулер</div>
+                            </div>
+                            <span class="component-price">3 000 ₽</span>
+                        </div>
+                        <div class="performance-indicator">
+                            <div class="performance-bar">
+                                <div class="performance-fill" style="width: 65%"></div>
+                            </div>
+                            <div class="performance-value">65%</div>
+                        </div>
+                        <div class="component-specs">
+                            <ul>
+                                <li>Тип: Воздушное</li>
+                                <li>Совместимость: Intel/AMD</li>
+                                <li>Уровень шума: 26 дБ</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="component-item" data-component="cooler" data-price="7000" data-type="air" data-performance="80" data-category="gaming" data-model="cooler2">
+                        <div class="component-item-content">
+                            <div>
+                                <span>Noctua NH-D15 <span class="performance-badge">Игры</span></span>
+                                <div class="component-details">Двойной башенный кулер</div>
+                            </div>
+                            <span class="component-price">7 000 ₽</span>
+                        </div>
+                        <div class="performance-indicator">
+                            <div class="performance-bar">
+                                <div class="performance-fill" style="width: 80%"></div>
+                            </div>
+                            <div class="performance-value">80%</div>
+                        </div>
+                        <div class="component-specs">
+                            <ul>
+                                <li>Тип: Воздушное</li>
+                                <li>Совместимость: Intel/AMD</li>
+                                <li>Уровень шума: 24 дБ</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="component-item" data-component="cooler" data-price="15000" data-type="liquid" data-performance="95" data-category="performance" data-model="cooler3">
+                        <div class="component-item-content">
+                            <div>
+                                <span>Corsair iCUE H150i Elite <span class="performance-badge">Производительность</span></span>
+                                <div class="component-details">СЖО 360mm</div>
+                            </div>
+                            <span class="component-price">15 000 ₽</span>
+                        </div>
+                        <div class="performance-indicator">
+                            <div class="performance-bar">
+                                <div class="performance-fill" style="width: 95%"></div>
+                            </div>
+                            <div class="performance-value">95%</div>
+                        </div>
+                        <div class="component-specs">
+                            <ul>
+                                <li>Тип: СЖО</li>
+                                <li>Радиатор: 360mm</li>
+                                <li>RGB подсветка</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="compatibility-status" id="compatibility-status">
+                <h3>Проверка совместимости</h3>
+                <p>Все компоненты совместимы</p>
+            </div>
+            
+            <div class="ai-suggestion" id="ai-suggestion">
+                <h3>🤖 Рекомендация ИИ</h3>
+                <p>Выберите компоненты для получения рекомендаций</p>
+            </div>
+            
+            <div class="stats-panel">
+                <div class="stat-card">
+                    <div class="stat-label">Общая стоимость</div>
+                    <div class="stat-value" id="total-price">0 ₽</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Потребляемая мощность</div>
+                    <div class="stat-value power-consumption" id="power-consumption">0 Вт</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Производительность</div>
+                    <div class="stat-value" id="performance-score">0%</div>
+                    <div class="progress-container">
+                        <div class="progress-bar" id="performance-bar" style="width: 0%"></div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Совместимость</div>
+                    <div class="stat-value compatibility-score" id="compatibility-score">100%</div>
+                    <div class="progress-container">
+                        <div class="progress-bar" id="compatibility-bar" style="width: 100%"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="button-group">
+                <button class="success-button" id="save-config">💾 Сохранить</button>
+                <button class="danger-button" id="reset-config">🔄 Сбросить</button>
+                <button class="mobile-only" id="close-configurator">✕ Закрыть</button>
+            </div>
+        </div>
+        
+        <!-- Визуализация -->
+        <div class="visualization">
+            <h2>3D визуализация</h2>
+            <div class="performance-mode">
+                <button class="mode-btn active" data-mode="normal">Нормальный вид</button>
+                <button class="mode-btn" data-mode="wireframe">Каркасный вид</button>
+            </div>
+            <div id="render-container">
+                <div class="loading-overlay" id="loading-overlay">
+                    <div>Загрузка 3D моделей...</div>
+                </div>
+                <div class="view-controls">
+                    <button class="view-btn" id="front-view">Вид спереди</button>
+                    <button class="view-btn" id="side-view">Вид сбоку</button>
+                    <button class="view-btn" id="top-view">Вид сверху</button>
+                </div>
+                <div class="exploded-view-control">
+                    <button class="exploded-btn" id="exploded-view">Разобранный вид</button>
+                </div>
+            </div>
+            <div class="controls-info">
+                <p>Используйте мышь для вращения, колесико для масштабирования</p>
+                <p class="mobile-only">Касание и перемещение для вращения, масштабирование двумя пальцами</p>
+            </div>
+            <div class="component-visual-list" id="component-visual-list">
+                <p>Выберите компоненты для отображения в 3D</p>
+            </div>
+            <div class="total-price" id="visual-total-price">Общая стоимость: 0 ₽</div>
+        </div>
+    </div>
+    
+    <div class="notification" id="notification">
+        Конфигурация сохранена!
+    </div>
+
+    <script>
+        // Основные переменные
+        let scene, camera, renderer, controls;
+        let selectedComponents = {};
+        let currentModels = {};
+        let isExplodedView = false;
+
+        // Мобильное меню
+        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+        const configurator = document.getElementById('configurator');
+        const mobileOverlay = document.getElementById('mobile-overlay');
+        const closeConfigurator = document.getElementById('close-configurator');
+
+        function toggleMobileMenu() {
+            configurator.classList.toggle('mobile-visible');
+            mobileOverlay.classList.toggle('active');
+            document.body.style.overflow = configurator.classList.contains('mobile-visible') ? 'hidden' : '';
+        }
+
+        // Создание корпуса ПК
+        function createPCCase() {
+            // Основа корпуса
+            const caseGeometry = new THREE.BoxGeometry(2, 1.5, 0.8);
+            const caseMaterial = new THREE.MeshPhongMaterial({ 
+                color: 0x333333,
+                transparent: true,
+                opacity: 0.7
+            });
+            const pcCase = new THREE.Mesh(caseGeometry, caseMaterial);
+            pcCase.position.y = 0;
+            scene.add(pcCase);
+            
+            // Стеклянная панель
+            const glassGeometry = new THREE.PlaneGeometry(1.9, 1.4);
+            const glassMaterial = new THREE.MeshPhongMaterial({ 
+                color: 0x88ccff,
+                transparent: true,
+                opacity: 0.2,
+                side: THREE.DoubleSide
+            });
+            const glass = new THREE.Mesh(glassGeometry, glassMaterial);
+            glass.position.set(0, 0, 0.41);
+            scene.add(glass);
+            
+            // Добавление места для компонентов
+            createComponentPlaceholders();
+        }
+
+        // Создание мест для компонентов
+        function createComponentPlaceholders() {
+            // Место для материнской платы
+            const mbGeometry = new THREE.BoxGeometry(1.5, 0.02, 0.8);
+            const mbMaterial = new THREE.MeshPhongMaterial({ 
+                color: 0x444444,
+                transparent: true,
+                opacity: 0.5
+            });
+            const motherboardPlaceholder = new THREE.Mesh(mbGeometry, mbMaterial);
+            motherboardPlaceholder.position.set(0, -0.3, 0);
+            motherboardPlaceholder.userData = { type: 'motherboard' };
+            scene.add(motherboardPlaceholder);
+            
+            // Место для блока питания
+            const psuGeometry = new THREE.BoxGeometry(0.5, 0.4, 0.6);
+            const psuMaterial = new THREE.MeshPhongMaterial({ 
+                color: 0x555555,
+                transparent: true,
+                opacity: 0.5
+            });
+            const psuPlaceholder = new THREE.Mesh(psuGeometry, psuMaterial);
+            psuPlaceholder.position.set(0.7, 0.2, 0);
+            psuPlaceholder.userData = { type: 'psu' };
+            scene.add(psuPlaceholder);
+            
+            // Место для видеокарты
+            const gpuGeometry = new THREE.BoxGeometry(0.6, 0.1, 0.2);
+            const gpuMaterial = new THREE.MeshPhongMaterial({ 
+                color: 0x666666,
+                transparent: true,
+                opacity: 0.5
+            });
+            const gpuPlaceholder = new THREE.Mesh(gpuGeometry, gpuMaterial);
+            gpuPlaceholder.position.set(0, -0.2, 0.2);
+            gpuPlaceholder.userData = { type: 'gpu' };
+            scene.add(gpuPlaceholder);
+            
+            // Место для кулера
+            const coolerGeometry = new THREE.CylinderGeometry(0.2, 0.2, 0.1, 32);
+            const coolerMaterial = new THREE.MeshPhongMaterial({ 
+                color: 0x777777,
+                transparent: true,
+                opacity: 0.5
+            });
+            const coolerPlaceholder = new THREE.Mesh(coolerGeometry, coolerMaterial);
+            coolerPlaceholder.position.set(0, -0.1, 0);
+            coolerPlaceholder.userData = { type: 'cooler' };
+            scene.add(coolerPlaceholder);
+        }
+
+        // Обновление 3D моделей компонентов
+        function update3DModels() {
+            // Удаление старых моделей
+            Object.values(currentModels).forEach(model => {
+                scene.remove(model);
+            });
+            currentModels = {};
+            
+            // Добавление новых моделей на основе выбранных компонентов
+            Object.keys(selectedComponents).forEach(componentType => {
+                const component = selectedComponents[componentType];
+                if (component) {
+                    createComponentModel(componentType, component);
+                }
+            });
+            
+            // Обновление списка компонентов в визуализации
+            updateComponentVisualList();
+        }
+
+        // Создание 3D модели компонента
+        function createComponentModel(type, component) {
+            let geometry, material, mesh;
+            
+            switch(type) {
+                case 'cpu':
+                    geometry = new THREE.BoxGeometry(0.1, 0.05, 0.1);
+                    material = new THREE.MeshPhongMaterial({ color: 0x00ff00 });
+                    mesh = new THREE.Mesh(geometry, material);
+                    mesh.position.set(0, -0.1, 0);
+                    break;
+                    
+                case 'motherboard':
+                    geometry = new THREE.BoxGeometry(1.4, 0.01, 0.7);
+                    material = new THREE.MeshPhongMaterial({ color: 0x0066cc });
+                    mesh = new THREE.Mesh(geometry, material);
+                    mesh.position.set(0, -0.3, 0);
+                    break;
+                    
+                case 'gpu':
+                    geometry = new THREE.BoxGeometry(0.5, 0.08, 0.15);
+                    material = new THREE.MeshPhongMaterial({ color: 0xcc0000 });
+                    mesh = new THREE.Mesh(geometry, material);
+                    mesh.position.set(0, -0.2, 0.2);
+                    break;
+                    
+                case 'ram':
+                    geometry = new THREE.BoxGeometry(0.1, 0.05, 0.3);
+                    material = new THREE.MeshPhongMaterial({ color: 0xffcc00 });
+                    mesh = new THREE.Mesh(geometry, material);
+                    mesh.position.set(0.3, -0.25, 0);
+                    break;
+                    
+                case 'psu':
+                    geometry = new THREE.BoxGeometry(0.45, 0.35, 0.55);
+                    material = new THREE.MeshPhongMaterial({ color: 0x666666 });
+                    mesh = new THREE.Mesh(geometry, material);
+                    mesh.position.set(0.7, 0.2, 0);
+                    break;
+                    
+                case 'cooler':
+                    geometry = new THREE.CylinderGeometry(0.18, 0.18, 0.08, 32);
+                    material = new THREE.MeshPhongMaterial({ color: 0xffffff });
+                    mesh = new THREE.Mesh(geometry, material);
+                    mesh.position.set(0, -0.1, 0);
+                    break;
+            }
+            
+            if (mesh) {
+                mesh.userData = { type: type, name: component.name };
+                scene.add(mesh);
+                currentModels[type] = mesh;
+            }
+        }
+
+        // Обновление списка компонентов в визуализации
+        function updateComponentVisualList() {
+            const list = document.getElementById('component-visual-list');
+            list.innerHTML = '';
+            
+            if (Object.keys(selectedComponents).length === 0) {
+                list.innerHTML = '<p>Выберите компоненты для отображения в 3D</p>';
+                return;
+            }
+            
+            Object.keys(selectedComponents).forEach(type => {
+                const component = selectedComponents[type];
+                const item = document.createElement('div');
+                item.className = 'component-list-item';
+                item.innerHTML = `
+                    <span>${getComponentTypeName(type)}:</span>
+                    <span>${component.name}</span>
+                    <span class="component-price">${component.price.toLocaleString()} ₽</span>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        // Получение читаемого имени типа компонента
+        function getComponentTypeName(type) {
+            const names = {
+                'cpu': 'Процессор',
+                'motherboard': 'Материнская плата',
+                'gpu': 'Видеокарта',
+                'ram': 'Оперативная память',
+                'psu': 'Блок питания',
+                'cooler': 'Охлаждение'
+            };
+            return names[type] || type;
+        }
+
+        // Инициализация Three.js
+        function initThreeJS() {
+            const container = document.getElementById('render-container');
+            
+            // Создание сцены
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x1a2a3a);
+            
+            // Создание камеры с учетом мобильных устройств
+            camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
+            
+            // Настройка позиции камеры для мобильных
+            if (window.innerWidth <= 768) {
+                camera.position.set(0, 0, 8);
+            } else {
+                camera.position.set(0, 0, 5);
+            }
+            
+            // Создание рендерера
+            renderer = new THREE.WebGLRenderer({ 
+                antialias: true,
+                powerPreference: "high-performance"
+            });
+            
+            // Настройка качества для мобильных
+            if (window.innerWidth <= 768) {
+                renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+            } else {
+                renderer.setPixelRatio(window.devicePixelRatio);
+            }
+            
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            
+            container.appendChild(renderer.domElement);
+            
+            // Настройка контролов для мобильных
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            
+            // Настройка чувствительности для мобильных
+            if (window.innerWidth <= 768) {
+                controls.rotateSpeed = 0.5;
+                controls.panSpeed = 0.5;
+            }
+            
+            // Добавление освещения
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(5, 10, 7);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.mapSize.width = 1024;
+            directionalLight.shadow.mapSize.height = 1024;
+            scene.add(directionalLight);
+            
+            // Создание корпуса ПК
+            createPCCase();
+            
+            // Обработка изменения размера окна
+            window.addEventListener('resize', onWindowResize);
+            
+            // Скрытие загрузочного экрана
+            setTimeout(() => {
+                document.getElementById('loading-overlay').style.display = 'none';
+            }, 1500);
+            
+            // Запуск анимации
+            animate();
+        }
+
+        // Обработка изменения размера окна
+        function onWindowResize() {
+            const container = document.getElementById('render-container');
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            
+            // Обновление позиции камеры для мобильных
+            if (window.innerWidth <= 768) {
+                camera.position.set(0, 0, 8);
+            } else {
+                camera.position.set(0, 0, 5);
+            }
+        }
+
+        // Анимация
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        // Инициализация конструктора
+        function initConfigurator() {
+            // Установка начального значения бюджета
+            updateBudgetDisplay();
+            
+            // Установка обработчиков для компонентов
+            document.querySelectorAll('.component-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    selectComponent(this);
+                });
+            });
+            
+            // Установка обработчиков для категорий
+            document.querySelectorAll('.category-header').forEach(header => {
+                header.addEventListener('click', function() {
+                    const category = this.parentElement;
+                    category.classList.toggle('collapsed');
+                });
+            });
+            
+            // Обновление общей стоимости
+            updateTotalPrice();
+        }
+
+        // Настройка обработчиков событий
+        function setupEventListeners() {
+            // Мобильное меню
+            mobileMenuBtn.addEventListener('click', toggleMobileMenu);
+            mobileOverlay.addEventListener('click', toggleMobileMenu);
+            closeConfigurator.addEventListener('click', toggleMobileMenu);
+
+            // Слайдер бюджета
+            document.getElementById('budget-slider').addEventListener('input', function() {
+                updateBudgetDisplay();
+                checkBudgetCompatibility();
+            });
+            
+            // Быстрые пресеты бюджета
+            document.querySelectorAll('.preset-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const budget = parseInt(this.getAttribute('data-preset'));
+                    document.getElementById('budget-slider').value = budget;
+                    updateBudgetDisplay();
+                    checkBudgetCompatibility();
+                });
+            });
+            
+            // Кнопка ИИ-подбора
+            document.getElementById('ai-suggest').addEventListener('click', function() {
+                aiSuggestConfiguration();
+            });
+            
+            // Кнопка сохранения
+            document.getElementById('save-config').addEventListener('click', function() {
+                saveConfiguration();
+            });
+            
+            // Кнопка сброса
+            document.getElementById('reset-config').addEventListener('click', function() {
+                resetConfiguration();
+            });
+            
+            // Поиск компонентов
+            document.getElementById('component-search').addEventListener('input', function() {
+                filterComponents(this.value);
+            });
+            
+            // Фильтры компонентов
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    filterByCategory(this.getAttribute('data-filter'));
+                });
+            });
+            
+            // Управление 3D видом
+            document.getElementById('front-view').addEventListener('click', function() {
+                camera.position.set(0, 0, 5);
+                controls.update();
+            });
+            
+            document.getElementById('side-view').addEventListener('click', function() {
+                camera.position.set(5, 0, 0);
+                controls.update();
+            });
+            
+            document.getElementById('top-view').addEventListener('click', function() {
+                camera.position.set(0, 5, 0);
+                controls.update();
+            });
+            
+            document.getElementById('exploded-view').addEventListener('click', function() {
+                toggleExplodedView();
+            });
+            
+            // Переключение режимов отображения
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    toggleRenderMode(this.getAttribute('data-mode'));
+                });
+            });
+
+            // Автоматическое скрытие меню на мобильных при выборе компонента
+            if (window.innerWidth <= 768) {
+                document.querySelectorAll('.component-item').forEach(item => {
+                    item.addEventListener('click', function() {
+                        setTimeout(() => {
+                            if (configurator.classList.contains('mobile-visible')) {
+                                toggleMobileMenu();
+                            }
+                        }, 500);
+                    });
+                });
+            }
+        }
+
+        // Выбор компонента
+        function selectComponent(element) {
+            const componentType = element.getAttribute('data-component');
+            const componentName = element.querySelector('span').textContent;
+            const componentPrice = parseInt(element.getAttribute('data-price'));
+            const componentModel = element.getAttribute('data-model');
+            
+            // Снятие выделения с других компонентов того же типа
+            document.querySelectorAll(`.component-item[data-component="${componentType}"]`).forEach(item => {
+                item.classList.remove('selected');
+            });
+            
+            // Выделение выбранного компонента
+            element.classList.add('selected');
+            
+            // Сохранение выбранного компонента
+            selectedComponents[componentType] = {
+                name: componentName,
+                price: componentPrice,
+                model: componentModel,
+                element: element
+            };
+            
+            // Обновление 3D моделей
+            update3DModels();
+            
+            // Обновление общей стоимости
+            updateTotalPrice();
+            
+            // Проверка совместимости
+            checkCompatibility();
+            
+            // Обновление рекомендаций ИИ
+            updateAISuggestion();
+            
+            // Проверка бюджета
+            checkBudgetCompatibility();
+            
+            // Показать уведомление
+            showNotification(`Добавлен: ${componentName}`);
+        }
+
+        // Обновление отображения бюджета
+        function updateBudgetDisplay() {
+            const slider = document.getElementById('budget-slider');
+            const value = parseInt(slider.value);
+            document.getElementById('budget-value').textContent = value.toLocaleString() + ' ₽';
+        }
+
+        // Обновление общей стоимости
+        function updateTotalPrice() {
+            let total = 0;
+            Object.values(selectedComponents).forEach(component => {
+                total += component.price;
+            });
+            
+            document.getElementById('total-price').textContent = total.toLocaleString() + ' ₽';
+            document.getElementById('visual-total-price').textContent = `Общая стоимость: ${total.toLocaleString()} ₽`;
+            
+            // Обновление индикатора производительности
+            updatePerformanceScore();
+        }
+
+        // Обновление индикатора производительности
+        function updatePerformanceScore() {
+            let totalPerformance = 0;
+            let componentCount = 0;
+            
+            Object.values(selectedComponents).forEach(component => {
+                const performance = parseInt(component.element.getAttribute('data-performance'));
+                totalPerformance += performance;
+                componentCount++;
+            });
+            
+            const avgPerformance = componentCount > 0 ? Math.round(totalPerformance / componentCount) : 0;
+            
+            document.getElementById('performance-score').textContent = avgPerformance + '%';
+            document.getElementById('performance-bar').style.width = avgPerformance + '%';
+        }
+
+        // Проверка совместимости компонентов
+        function checkCompatibility() {
+            const statusElement = document.getElementById('compatibility-status');
+            let issues = [];
+            
+            // Проверка процессора и материнской платы
+            if (selectedComponents.cpu && selectedComponents.motherboard) {
+                const cpuSocket = selectedComponents.cpu.element.getAttribute('data-socket');
+                const mbSocket = selectedComponents.motherboard.element.getAttribute('data-socket');
+                
+                if (cpuSocket !== mbSocket) {
+                    issues.push(`Несовместимость сокетов: процессор (${cpuSocket}) и материнская плата (${mbSocket})`);
+                }
+            }
+            
+            // Проверка оперативной памяти и материнской платы
+            if (selectedComponents.ram && selectedComponents.motherboard) {
+                const ramType = selectedComponents.ram.element.getAttribute('data-ramtype');
+                const mbRamType = selectedComponents.motherboard.element.getAttribute('data-ramtype');
+                
+                if (ramType !== mbRamType) {
+                    issues.push(`Несовместимость типа памяти: ОЗУ (${ramType}) и материнская плата (${mbRamType})`);
+                }
+            }
+            
+            // Проверка мощности блока питания
+            if (selectedComponents.psu) {
+                const psuWattage = parseInt(selectedComponents.psu.element.getAttribute('data-wattage'));
+                let totalPower = 0;
+                
+                Object.values(selectedComponents).forEach(component => {
+                    const power = parseInt(component.element.getAttribute('data-power')) || 0;
+                    totalPower += power;
+                });
+                
+                if (totalPower > psuWattage * 0.8) { // Оставляем 20% запаса
+                    issues.push(`Мощность блока питания (${psuWattage}W) может быть недостаточной для системы (потребление: ~${totalPower}W)`);
+                }
+            }
+            
+            // Обновление отображения статуса совместимости
+            if (issues.length === 0) {
+                statusElement.innerHTML = '<h3>✅ Проверка совместимости</h3><p>Все компоненты совместимы</p>';
+                statusElement.className = 'compatibility-status';
+                document.getElementById('compatibility-score').textContent = '100%';
+                document.getElementById('compatibility-bar').style.width = '100%';
+            } else {
+                statusElement.innerHTML = `<h3>⚠️ Проблемы совместимости</h3><ul>${issues.map(issue => `<li>${issue}</li>`).join('')}</ul>`;
+                statusElement.className = 'compatibility-status compatibility-warning';
+                const score = Math.max(0, 100 - issues.length * 20);
+                document.getElementById('compatibility-score').textContent = score + '%';
+                document.getElementById('compatibility-bar').style.width = score + '%';
+                
+                if (issues.some(issue => issue.includes('Несовместимость'))) {
+                    statusElement.className = 'compatibility-status compatibility-error';
+                }
+            }
+            
+            // Обновление потребляемой мощности
+            updatePowerConsumption();
+        }
+
+        // Обновление отображения потребляемой мощности
+        function updatePowerConsumption() {
+            let totalPower = 0;
+            
+            Object.values(selectedComponents).forEach(component => {
+                const power = parseInt(component.element.getAttribute('data-power')) || 0;
+                totalPower += power;
+            });
+            
+            document.getElementById('power-consumption').textContent = totalPower + ' Вт';
+        }
+
+        // Проверка соответствия бюджету
+        function checkBudgetCompatibility() {
+            const budget = parseInt(document.getElementById('budget-slider').value);
+            const total = Object.values(selectedComponents).reduce((sum, component) => sum + component.price, 0);
+            
+            if (total > budget) {
+                document.getElementById('compatibility-status').innerHTML += '<p>⚠️ Превышение бюджета</p>';
+                document.getElementById('compatibility-status').classList.add('compatibility-warning');
+            }
+        }
+
+        // Обновление рекомендаций ИИ
+        function updateAISuggestion() {
+            const suggestionElement = document.getElementById('ai-suggestion');
+            let suggestion = '';
+            
+            // Проверка на сбалансированность конфигурации
+            const cpu = selectedComponents.cpu;
+            const gpu = selectedComponents.gpu;
+            
+            if (cpu && gpu) {
+                const cpuPrice = cpu.price;
+                const gpuPrice = gpu.price;
+                
+                if (gpuPrice > cpuPrice * 2) {
+                    suggestion = 'Рекомендуется выбрать более производительный процессор для баланса с видеокартой.';
+                } else if (cpuPrice > gpuPrice * 1.5) {
+                    suggestion = 'Рекомендуется выбрать более производительную видеокарту для баланса с процессором.';
+                } else {
+                    suggestion = 'Конфигурация хорошо сбалансирована.';
+                }
+            } else if (Object.keys(selectedComponents).length > 0) {
+                suggestion = 'Продолжайте выбирать компоненты для получения рекомендаций.';
+            } else {
+                suggestion = 'Выберите компоненты для получения рекомендаций.';
+            }
+            
+            suggestionElement.innerHTML = `<h3>🤖 Рекомендация ИИ</h3><p>${suggestion}</p>`;
+        }
+
+        // Автоматический подбор конфигурации ИИ
+        function aiSuggestConfiguration() {
+            const budget = parseInt(document.getElementById('budget-slider').value);
+            
+            // Сброс текущей конфигурации
+            resetConfiguration();
+            
+            // Подбор компонентов в рамках бюджета
+            const categories = ['cpu', 'motherboard', 'gpu', 'ram', 'psu', 'cooler'];
+            let remainingBudget = budget;
+            
+            categories.forEach(category => {
+                const items = document.querySelectorAll(`.component-item[data-component="${category}"]`);
+                let bestItem = null;
+                
+                // Выбор лучшего компонента в рамках оставшегося бюджета
+                items.forEach(item => {
+                    const price = parseInt(item.getAttribute('data-price'));
+                    if (price <= remainingBudget * 0.3) { // Максимум 30% бюджета на один компонент
+                        if (!bestItem || price > parseInt(bestItem.getAttribute('data-price'))) {
+                            bestItem = item;
+                        }
+                    }
+                });
+                
+                if (bestItem) {
+                    selectComponent(bestItem);
+                    remainingBudget -= parseInt(bestItem.getAttribute('data-price'));
+                }
+            });
+            
+            showNotification('Конфигурация подобрана автоматически!');
+        }
+
+        // Сохранение конфигурации
+        function saveConfiguration() {
+            const config = {
+                components: selectedComponents,
+                totalPrice: Object.values(selectedComponents).reduce((sum, component) => sum + component.price, 0),
+                timestamp: new Date().toISOString()
+            };
+            
+            localStorage.setItem('pcConfig', JSON.stringify(config));
+            showNotification('Конфигурация сохранена!');
+        }
+
+        // Сброс конфигурации
+        function resetConfiguration() {
+            // Снятие выделения со всех компонентов
+            document.querySelectorAll('.component-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            
+            // Очистка выбранных компонентов
+            selectedComponents = {};
+            
+            // Обновление 3D моделей
+            update3DModels();
+            
+            // Обновление общей стоимости
+            updateTotalPrice();
+            
+            // Сброс проверки совместимости
+            document.getElementById('compatibility-status').innerHTML = '<h3>Проверка совместимости</h3><p>Все компоненты совместимы</p>';
+            document.getElementById('compatibility-status').className = 'compatibility-status';
+            
+            // Сброс рекомендаций ИИ
+            document.getElementById('ai-suggestion').innerHTML = '<h3>🤖 Рекомендация ИИ</h3><p>Выберите компоненты для получения рекомендаций</p>';
+            
+            // Сброс индикаторов
+            document.getElementById('compatibility-score').textContent = '100%';
+            document.getElementById('compatibility-bar').style.width = '100%';
+            document.getElementById('performance-score').textContent = '0%';
+            document.getElementById('performance-bar').style.width = '0%';
+            document.getElementById('power-consumption').textContent = '0 Вт';
+            
+            showNotification('Конфигурация сброшена');
+        }
+
+        // Фильтрация компонентов по поисковому запросу
+        function filterComponents(query) {
+            const items = document.querySelectorAll('.component-item');
+            const lowerQuery = query.toLowerCase();
+            
+            items.forEach(item => {
+                const text = item.textContent.toLowerCase();
+                if (text.includes(lowerQuery)) {
+                    item.style.display = 'flex';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        }
+
+        // Фильтрация компонентов по категории
+        function filterByCategory(category) {
+            const items = document.querySelectorAll('.component-item');
+            
+            items.forEach(item => {
+                if (category === 'all') {
+                    item.style.display = 'flex';
+                } else {
+                    const itemCategory = item.getAttribute('data-category');
+                    if (itemCategory === category) {
+                        item.style.display = 'flex';
+                    } else {
+                        item.style.display = 'none';
+                    }
+                }
+            });
+        }
+
+        // Переключение разобранного вида
+        function toggleExplodedView() {
+            isExplodedView = !isExplodedView;
+            
+            Object.values(currentModels).forEach((model, index) => {
+                if (isExplodedView) {
+                    // Размещение компонентов в разобранном виде
+                    const angle = (index / Object.keys(currentModels).length) * Math.PI * 2;
+                    const radius = 2;
+                    model.position.x = Math.cos(angle) * radius;
+                    model.position.z = Math.sin(angle) * radius;
+                    model.position.y = 0;
+                } else {
+                    // Возвращение компонентов на свои места
+                    createComponentModel(model.userData.type, { name: model.userData.name });
+                }
+            });
+            
+            document.getElementById('exploded-view').textContent = 
+                isExplodedView ? 'Обычный вид' : 'Разобранный вид';
+        }
+
+        // Переключение режима рендеринга
+        function toggleRenderMode(mode) {
+            if (mode === 'wireframe') {
+                scene.traverse(child => {
+                    if (child.isMesh) {
+                        child.material.wireframe = true;
+                    }
+                });
+            } else {
+                scene.traverse(child => {
+                    if (child.isMesh) {
+                        child.material.wireframe = false;
+                    }
+                });
+            }
+        }
+
+        // Показать уведомление
+        function showNotification(message) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        // Инициализация при загрузке
+        document.addEventListener('DOMContentLoaded', function() {
+            initThreeJS();
+            initConfigurator();
+            setupEventListeners();
+        });
+
+    </script>
+</body>
+</html>
